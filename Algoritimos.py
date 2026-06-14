@@ -26,8 +26,13 @@ class AlgoritmosDeBusca:
 
     def _calcular_custo(self, custo_chao, vetor_movimento, carregando_peso):
         """Calcula o custo do terreno + penalidade do vento de Markov."""
+        if isinstance(custo_chao, str):
+            custo_chao = 1
+            
+        custo_final = custo_chao
         vetor_vento = self.clima["vetor"]
         forca_vento = self.clima["forca"]
+
         
         custo_final = custo_chao
         

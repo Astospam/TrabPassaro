@@ -26,9 +26,9 @@ class Ambiente:
     def gerar_comida(self, quantidade, raio_exclusao_ninho):
         """Espalha comidas com diferentes valores nutricionais."""
         tipos_de_comida = [
-            {"nome": "Inseto", "valor": 20},
-            {"nome": "Lagarto", "valor": 50},
-            {"nome": "Carcaça", "valor": 100}
+            {"nome": "Inseto", "valor": 5},
+            {"nome": "Lagarto", "valor": 10},
+            {"nome": "Carcaça", "valor": 15}
         ]
         
         for _ in range(quantidade):

@@ -1,10 +1,10 @@
 import math
 
 class Carcara:
-    def __init__(self, mapa_ambiente):
+    def __init__(self, ambiente_ambiente):
 
-        self.mapa = mapa_ambiente
-        self.posicao = self.mapa.posicao_ninho
+        self.ambiente = ambiente_ambiente
+        self.posicao = self.ambiente.posicao_ninho
         
         self.carregando_comida = False
         self.alvo_atual = None
@@ -25,7 +25,7 @@ class Carcara:
         
         print("--- O Carcará está pensando ---")
         
-        for coordenada, comida in self.mapa.comidas_ativas.items():
+        for coordenada, comida in self.ambiente.posicao_comida.items():
             distancia = self._estimar_custo_heuristico(coordenada)
             
             if distancia == 0:
@@ -40,15 +40,15 @@ class Carcara:
                 melhor_alvo = coordenada
                 
         self.alvo_atual = melhor_alvo
-        print(f">>> Carcará avistou sua Comida!: {self.mapa.comidas_ativas[melhor_alvo]['nome']} em {melhor_alvo}")
+        print(f">>> Carcará avistou sua Comida!: {self.ambiente.posicao_comida[melhor_alvo]['nome']} em {melhor_alvo}")
         return melhor_alvo
 
     def pegar_comida(self):
 
-        if self.posicao in self.mapa.comidas_ativas:
-            comida_coletada = self.mapa.comidas_ativas.pop(self.posicao)
+        if self.posicao in self.ambiente.posicao_comida:
+            comida_coletada = self.ambiente.posicao_comida.pop(self.posicao)
             self.carregando_comida = True
             print(f"\nCarcará pegou {comida_coletada['nome']}! Ele agora está pesado.")
             
-            self.alvo_atual = self.mapa.posicao_ninho
+            self.alvo_atual = self.ambiente.posicao_ninho
             print(f"Novo alvo: Voltar para o ninho em {self.alvo_atual}")
