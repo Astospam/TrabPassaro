@@ -1,9 +1,11 @@
 import pygame
 import sys
+import time
 from Ambiente import Ambiente
 from Vento import ClimaMarkov
 from Agente import Carcara
-# IMPORTANTE: ajuste o nome do arquivo abaixo para bater com o seu (ex: Algoritimos ou algoritmos)
+
+
 from Algoritimos import AlgoritmosDeBusca 
 
 # --- CONFIGURAÇÕES VISUAIS ---
@@ -19,7 +21,7 @@ CORES = {
     "caminho": (100, 100, 255),
     
     "comida": (50, 200, 50),
-    # Novas cores para cada tipo de recompensa
+
     "Inseto": (150, 250, 150),   # Verde claro (menor valor)
     "Lagarto": (255, 165, 0),    # Laranja (médio valor)
     "Carcaça": (128, 0, 128)     # Roxo escuro (alto valor)
@@ -44,15 +46,85 @@ class InterfaceGrafica:
         self.fase_atual = "IDA"
         self.estado_vento = self.clima.passar_turno()
         self.motores.clima = self.estado_vento
+
+        # 1. PRIMEIRO o pássaro pensa e escolhe o alvo (usando o vento atual)
+        self.carcara.escolher_melhor_alvo(self.estado_vento)
         
-        self.carcara.escolher_melhor_alvo()
+        # 2. SEGUNDO, com o alvo definido, geramos a tabela de métricas
+        self.gerar_relatorio_desempenho()
+        
+        # 3. TERCEIRO, definimos a rota visual inicial do A* para a animação
+        self.algoritmo_atual = "A*" 
         self.caminho_atual, _ = self.motores.a_estrela(
             self.carcara.posicao, self.carcara.alvo_atual, self.carcara.carregando_comida
         )
         
-        # Temporizador para a animação (Move a cada 300 milissegundos)
+        # O temporizador da animação
         self.delay_passo = 300 
         self.tempo_ultimo_passo = pygame.time.get_ticks()
+
+    def gerar_relatorio_desempenho(self):
+        """Avalia o saldo de energia biológico e o custo computacional para cada algoritmo."""
+        
+        if self.carcara.alvo_atual is None:
+            print("ERRO CRÍTICO: O Carcará não encontrou nenhuma comida no mapa!")
+            sys.exit()
+            
+        # Pega as informações reais da comida alvo para a matemática
+        comida_alvo = self.mapa.posicao_comida[self.carcara.alvo_atual]
+        valor_nutricional = comida_alvo["valor"]
+        nome_comida = comida_alvo["nome"]
+            
+        print("\n" + "="*105)
+        print(f" RELATÓRIO COMPLETO (Alvo: {nome_comida} | {valor_nutricional * 10} kcal) ")
+        print("="*105)
+        
+
+        print(f"{'Algoritmo':<10} | {'Passos (Gasto)':<15} | {'Risco (Dano)':<15} | {'Saldo Final':<15} | {'Tempo (ms)':<12} | {'Nós Exp.'}")
+        print("-" * 105)
+
+        algoritmos_para_testar = ["A*", "GREEDY", "BFS", "DFS"]
+        
+        for alg in algoritmos_para_testar:
+  
+            inicio_tempo = time.perf_counter()
+
+            if alg == "A*":
+                caminho, nos = self.motores.a_estrela(self.carcara.posicao, self.carcara.alvo_atual, False)
+            elif alg == "GREEDY":
+                caminho, nos = self.motores.busca_gulosa_greedy(self.carcara.posicao, self.carcara.alvo_atual, False)
+            elif alg == "BFS":
+                caminho, nos = self.motores.busca_em_largura_bfs(self.carcara.posicao, self.carcara.alvo_atual, False)
+            elif alg == "DFS":
+                caminho, nos = self.motores.busca_em_profundidade_dfs(self.carcara.posicao, self.carcara.alvo_atual, False)
+                
+            fim_tempo = time.perf_counter()
+            tempo_ms = (fim_tempo - inicio_tempo) * 1000
+            
+            if not caminho:
+                print(f"{alg:<10} | FALHOU EM ENCONTRAR ROTA")
+                continue
+                
+            passos_dados = len(caminho)
+            dano_predadores = 0
+            
+            for x, y in caminho:
+                valor_chao = self.mapa.grid[y][x]
+                if valor_chao == 5: 
+                    dano_predadores += 15 
+                    
+            saldo_energia = (valor_nutricional*10) - passos_dados - dano_predadores
+            
+            str_passos = f"-{passos_dados}"
+            str_dano = f"-{dano_predadores}" if dano_predadores > 0 else "Seguro"
+            str_saldo = f"{saldo_energia} kcal"
+            
+            print(f"{alg:<10} | {str_passos:<15} | {str_dano:<15} | {str_saldo:<15} | {tempo_ms:<12.3f} | {nos}")
+            
+        print("="*105 + "\n")
+        
+        self.algoritmo_atual = "A*"
+        self.caminho_atual, _ = self.motores.a_estrela(self.carcara.posicao, self.carcara.alvo_atual, self.carcara.carregando_comida)
 
     def desenhar_grid(self):
         """Desenha o chão, os perigos, o ninho e identifica as comidas."""
@@ -68,14 +140,14 @@ class InterfaceGrafica:
                 elif valor_celula == "N":
                     cor_bloco = CORES["ninho"]
                 elif valor_celula == "C":
-                    # --- A LÓGICA DAS COMIDAS ENTRA AQUI ---
+
                     coordenada = (x, y)
-                    # Verifica se a comida ainda existe no dicionário (se não foi comida)
+
                     if coordenada in self.mapa.posicao_comida:
                         nome_comida = self.mapa.posicao_comida[coordenada]["nome"]
-                        cor_bloco = CORES[nome_comida] # Puxa a cor exata da paleta
+                        cor_bloco = CORES[nome_comida] 
                     else:
-                        # Se já foi comida, vira chão normal
+
                         self.mapa.grid[y][x] = 1 
                         cor_bloco = CORES["chao"]
                     
@@ -92,7 +164,7 @@ class InterfaceGrafica:
 
     def desenhar_agente_e_caminho(self):
         """Desenha a rota planejada e o próprio pássaro por cima de tudo."""
-        # Desenha bolinhas azuis para mostrar qual caminho a IA quer fazer
+
         for pos_x, pos_y in self.caminho_atual:
             centro_x = pos_x * TAMANHO_BLOCO + (TAMANHO_BLOCO // 2)
             centro_y = pos_y * TAMANHO_BLOCO + (TAMANHO_BLOCO // 2)
