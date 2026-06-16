@@ -13,13 +13,12 @@ def rodar_experimento_em_massa(num_ambientes=30):
 
     arquivo_csv = "resultados_carcara.csv"
     
-    # Cabeçalho limpo, apenas com as 5 variáveis exigidas
     colunas = ["Ambiente_ID", "Algoritmo", "Saldo_Energia", "Tempo_ms", "Nos_Expandidos"]
 
-    # Dicionário acumulador simplificado para as médias
+  
     acumulado = {
         alg: {"saldo": 0, "tempo": 0, "nos": 0, "sucessos": 0}
-        for alg in ["A*", "GREEDY", "BFS", "DFS"]
+        for alg in ["A*", "GREEDY", "BFS", "DFS", "Q-LEARNING"]
     }
 
     with open(arquivo_csv, mode="w", newline="", encoding="utf-8") as f:
@@ -43,7 +42,8 @@ def rodar_experimento_em_massa(num_ambientes=30):
                 
             comida_alvo = meu_mapa.posicao_comida[carcara.alvo_atual]
             
-            for alg in ["A*", "GREEDY", "BFS", "DFS"]:
+            
+            for alg in ["A*", "GREEDY", "BFS", "DFS", "Q-LEARNING"]:
                 inicio_tempo = time.perf_counter()
                 
                 if alg == "A*":
@@ -54,20 +54,19 @@ def rodar_experimento_em_massa(num_ambientes=30):
                     caminho, nos = motores.busca_em_largura_bfs(carcara.posicao, carcara.alvo_atual, False)
                 elif alg == "DFS":
                     caminho, nos = motores.busca_em_profundidade_dfs(carcara.posicao, carcara.alvo_atual, False)
+                elif alg == "Q-LEARNING":
+                    caminho, nos = motores.aprendizado_por_reforco_qlearning(carcara.posicao, carcara.alvo_atual, False)
                 
                 fim_tempo = time.perf_counter()
                 tempo_ms = (fim_tempo - inicio_tempo) * 1000
                 
                 if caminho:
-                    # Calcula as penalidades apenas para achar o saldo
                     passos = len(caminho)
                     dano = sum(15 for x, y in caminho if meu_mapa.grid[y][x] == 5)
                     saldo = (comida_alvo["valor"] * 10) - passos - dano
                     
-                    # Salva no CSV apenas as variáveis limpas
                     escritor.writerow([i, alg, saldo, round(tempo_ms, 3), nos])
                     
-                    # Acumula para as médias
                     acumulado[alg]["saldo"] += saldo
                     acumulado[alg]["tempo"] += tempo_ms
                     acumulado[alg]["nos"] += nos
@@ -78,7 +77,7 @@ def rodar_experimento_em_massa(num_ambientes=30):
             if i % 5 == 0 or i == num_ambientes:
                 print(f" -> {i}/{num_ambientes} ambientes processados...")
 
-    # Imprime o Resumo Limpo no Terminal
+
     print("\n" + "="*60)
     print(f" RESUMO DAS MÉDIAS APÓS {num_ambientes} EXPERIMENTOS ")
     print("="*60)
@@ -97,5 +96,4 @@ def rodar_experimento_em_massa(num_ambientes=30):
     print(f"\n[SUCESSO] Dados salvos no arquivo '{arquivo_csv}'.")
 
 if __name__ == "__main__":
-    # Teste de carga com 50 ambientes
     rodar_experimento_em_massa(num_ambientes=50)

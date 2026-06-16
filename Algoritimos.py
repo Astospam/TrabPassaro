@@ -1,4 +1,5 @@
 import heapq
+import random
 from collections import deque
 
 class AlgoritmosDeBusca:
@@ -9,7 +10,7 @@ class AlgoritmosDeBusca:
     def _pegar_vizinhos_validos(self, posicao):
         """Retorna os vizinhos (cima, baixo, esquerda, direita) dentro dos limites da malha."""
         x, y = posicao
-        # Vetores de movimento
+        
         movimentos = [
             (0, -1),  # Cima
             (0, 1),   # Baixo
@@ -36,7 +37,7 @@ class AlgoritmosDeBusca:
         
         custo_final = custo_chao
         
-        # Penalidade direcional: se anda contra o vetor do vento
+ 
         if (vetor_vento[0] != 0 and vetor_movimento[0] == -vetor_vento[0]) or \
            (vetor_vento[1] != 0 and vetor_movimento[1] == -vetor_vento[1]):
             
@@ -62,7 +63,7 @@ class AlgoritmosDeBusca:
         return caminho
 
     # ==========================================
-    # 1. BFS (Busca em Largura) - Expansão em Onda
+    # 1. BFS (Busca em Largura)
     # ==========================================
     def busca_em_largura_bfs(self, inicio, alvo, carregando_peso=False):
         fila = deque()
@@ -85,7 +86,7 @@ class AlgoritmosDeBusca:
         return self._reconstruir_caminho(veio_de, inicio, alvo), nos_expandidos
 
     # ==========================================
-    # 2. DFS (Busca em Profundidade) - Mergulho Cego
+    # 2. DFS (Busca em Profundidade)
     # ==========================================
     def busca_em_profundidade_dfs(self, inicio, alvo, carregando_peso=False):
         pilha = []
@@ -108,7 +109,7 @@ class AlgoritmosDeBusca:
         return self._reconstruir_caminho(veio_de, inicio, alvo), nos_expandidos
 
     # ==========================================
-    # 3. Greedy Best-First (Busca Gulosa) - Focado no Alvo
+    # 3. Greedy Best-First (Busca Gulosa)
     # ==========================================
     def busca_gulosa_greedy(self, inicio, alvo, carregando_peso=False):
         fila_prioridade = []
@@ -135,7 +136,7 @@ class AlgoritmosDeBusca:
         return self._reconstruir_caminho(veio_de, inicio, alvo), nos_expandidos
 
     # ==========================================
-    # 4. A* (A-Estrela) - Focado e Cuidadoso
+    # 4. A* (A-Estrela)
     # ==========================================
     def a_estrela(self, inicio, alvo, carregando_peso=False):
         fila_prioridade = []
@@ -156,7 +157,6 @@ class AlgoritmosDeBusca:
                 vx, vy = vizinho
                 custo_chao = self.mapa.grid[vy][vx]
                 
-                # Calcula o esforço real de ir para aquele vizinho
                 custo_passo = self._calcular_custo(custo_chao, vetor_mov, carregando_peso)
                 novo_custo_g = custo_g[atual] + custo_passo
                 
@@ -164,9 +164,90 @@ class AlgoritmosDeBusca:
                     custo_g[vizinho] = novo_custo_g
                     
                     distancia_h = self._distancia_manhattan(vizinho, alvo)
-                    custo_f = novo_custo_g + distancia_h # Soma o esforço gasto com a previsão restante
+                    custo_f = novo_custo_g + distancia_h 
                     
                     heapq.heappush(fila_prioridade, (custo_f, vizinho))
                     veio_de[vizinho] = atual
                     
         return self._reconstruir_caminho(veio_de, inicio, alvo), nos_expandidos
+    
+    def aprendizado_por_reforco_qlearning(self, pos_inicial, alvo, carregando_comida=False):
+        """O Carcará treina milhares de vezes mentalmente antes de voar de verdade."""
+        acoes = [(0, -1), (0, 1), (-1, 0), (1, 0)] 
+        q_table = {}
+        
+        alpha = 0.1      
+        gamma = 0.95     
+        epsilon = 1.0    
+        epsilon_decay = 0.99
+        min_epsilon = 0.01
+        episodios = 2000 #
+        
+        def get_q(estado, acao):
+            return q_table.get((estado, acao), 0.0)
+            
+        nos_explorados = set()
+        
+
+        for ep in range(episodios):
+            estado = pos_inicial
+            passos = 0
+            
+            while estado != alvo and passos < 100:
+                nos_explorados.add(estado)
+                
+
+                if random.uniform(0, 1) < epsilon:
+                    acao = random.choice(acoes)
+                else:
+                    q_valores = [get_q(estado, a) for a in acoes]
+                    max_q = max(q_valores)
+                    acoes_vencedoras = [a for a, q in zip(acoes, q_valores) if q == max_q]
+                    acao = random.choice(acoes_vencedoras)
+                    
+                prox_x = estado[0] + acao[0]
+                prox_y = estado[1] + acao[1]
+                prox_estado = (prox_x, prox_y)
+                
+
+                if 0 <= prox_x < self.mapa.largura and 0 <= prox_y < self.mapa.altura:
+                    valor_bloco = self.mapa.grid[prox_y][prox_x]
+                    
+                    if prox_estado == alvo:
+                        recompensa = 100  
+                    elif valor_bloco == 5:
+                        recompensa = -50  
+                    else:
+                        recompensa = -1   
+                else:
+                    prox_estado = estado  
+                    recompensa = -10
+                    
+                max_prox_q = max([get_q(prox_estado, a) for a in acoes])
+                q_atual = get_q(estado, acao)
+                novo_q = q_atual + alpha * (recompensa + gamma * max_prox_q - q_atual)
+                
+                q_table[(estado, acao)] = novo_q
+                estado = prox_estado
+                passos += 1
+                
+
+            epsilon = max(min_epsilon, epsilon * epsilon_decay)
+            
+        caminho = []
+        estado = pos_inicial
+        passos = 0
+        
+        while estado != alvo and passos < 100:
+            q_valores = [get_q(estado, a) for a in acoes]
+            max_q = max(q_valores)
+            
+            if max_q == 0.0 and all(q == 0 for q in q_valores):
+                break 
+                
+            acao = acoes[q_valores.index(max_q)]
+            estado = (estado[0] + acao[0], estado[1] + acao[1])
+            caminho.append(estado)
+            passos += 1
+            
+        return caminho, len(nos_explorados)
